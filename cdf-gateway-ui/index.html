@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDF AI Gateway - 公司内部 AI 网关 Web UI 设计</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        :root {
+            --cdf-blue-primary: #2563EB;
+            --cdf-blue-light: #3B82F6;
+            --cdf-blue-dark: #1D4ED8;
+            --cdf-cyan: #06B6D4;
+            --cdf-purple: #8B5CF6;
+            --cdf-gradient-start: #2563EB;
+            --cdf-gradient-end: #06B6D4;
+        }
+        
+        .cdf-gradient {
+            background: linear-gradient(135deg, var(--cdf-gradient-start) 0%, var(--cdf-gradient-end) 100%);
+        }
+        
+        .cdf-gradient-text {
+            background: linear-gradient(135deg, var(--cdf-gradient-start) 0%, var(--cdf-gradient-end) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .cdf-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            box-shadow: 0 4px 24px rgba(37, 99, 235, 0.08);
+        }
+        
+        .cdf-card-dark {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cdf-btn-primary {
+            background: linear-gradient(135deg, var(--cdf-blue-primary) 0%, var(--cdf-blue-dark) 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .cdf-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+        }
+        
+        .cdf-tech-line {
+            position: relative;
+        }
+        
+        .cdf-tech-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--cdf-blue-primary), transparent);
+        }
+        
+        .cdf-nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .cdf-nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--cdf-blue-primary), var(--cdf-cyan));
+            transition: width 0.3s ease;
+        }
+        
+        .cdf-nav-item:hover::after,
+        .cdf-nav-item.active::after {
+            width: 80%;
+        }
+        
+        .cdf-stat-card {
+            transition: all 0.3s ease;
+        }
+        
+        .cdf-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(37, 99, 235, 0.15);
+        }
+        
+        .cdf-api-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .cdf-api-card:hover {
+            border-color: var(--cdf-blue-primary);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+        }
+        
+        .cdf-logo-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .cdf-logo-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.3) 0%, transparent 70%);
+            filter: blur(20px);
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
+        }
+        
+        .cdf-input {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+        
+        .cdf-input:focus {
+            border-color: var(--cdf-blue-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+        
+        /* 响应式断点 */
+        @media (max-width: 768px) {
+            .cdf-hide-mobile {
+                display: none !important;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .cdf-hide-tablet {
+                display: none !important;
+            }
+        }
+        
+        .cdf-scroll-smooth {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen cdf-scroll-smooth">
+
+    <!-- 顶部导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 z-50 cdf-card border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo + 公司名 -->
+                <div class="flex items-center space-x-3">
+                    <div class="cdf-logo-container">
+                        <div class="cdf-logo-glow"></div>
+                        <div class="relative w-10 h-10 cdf-gradient rounded-xl flex items-center justify-center shadow-lg">
+                            <span class="text-white font-bold text-lg">C</span>
+                        </div>
+                    </div>
+                    <div class="cdf-hide-mobile">
+                        <h1 class="text-xl font-bold cdf-gradient-text">CDF AI Gateway</h1>
+                        <p class="text-xs text-gray-500">企业内部 AI 服务网关</p>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 - 桌面端 -->
+                <div class="cdf-hide-mobile flex items-center space-x-1">
+                    <a href="#dashboard" class="cdf-nav-item active px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">Dashboard</a>
+                    <a href="#api-list" class="cdf-nav-item px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">API 列表</a>
+                    <a href="#api-detail" class="cdf-nav-item px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">API 调用</a>
+                    <a href="#settings" class="cdf-nav-item px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">设置</a>
+                </div>
+                
+                <!-- 用户信息 -->
+                <div class="flex items-center space-x-3">
+                    <button class="p-2 text-gray-500 hover:text-blue-600 transition-colors">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                    </button>
+                    <div class="flex items-center space-x-2 cdf-hide-mobile">
+                        <div class="w-8 h-8 cdf-gradient rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm font-medium">A</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Admin</p>
+                            <p class="text-xs text-gray-500">管理员</p>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                    </div>
+                    <!-- 移动端菜单按钮 -->
+                    <button class="cdf-hide-tablet p-2 text-gray-500">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="pt-20 pb-12">
+        
+        <!-- Dashboard 页面 -->
+        <section id="dashboard" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 cdf-tech-line pl-12">Dashboard 概览</h2>
+                <p class="text-gray-500 mt-2">实时监控 API 调用情况与系统健康状态</p>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="cdf-card cdf-stat-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 cdf-gradient rounded-xl flex items-center justify-center">
+                            <i data-lucide="zap" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <span class="text-green-500 text-sm font-medium flex items-center">
+                            <i data-lucide="trending-up" class="w-4 h-4 mr-1"></i>
+                            +12.5%
+                        </span>
+                    </div>
+                    <h3 class="text-gray-500 text-sm mb-1">今日调用量</h3>
+                    <p class="text-3xl font-bold text-gray-800">24,589</p>
+                    <p class="text-xs text-gray-400 mt-2">较昨日增加 2,847 次</p>
+                </div>
+                
+                <div class="cdf-card cdf-stat-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center">
+                            <i data-lucide="circle-check" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <span class="text-green-500 text-sm font-medium">99.9%</span>
+                    </div>
+                    <h3 class="text-gray-500 text-sm mb-1">调用成功率</h3>
+                    <p class="text-3xl font-bold text-gray-800">99.9%</p>
+                    <p class="text-xs text-gray-400 mt-2">过去 24 小时平均</p>
+                </div>
+                
+                <div class="cdf-card cdf-stat-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center">
+                            <i data-lucide="clock" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <span class="text-green-500 text-sm font-medium flex items-center">
+                            <i data-lucide="trending-down" class="w-4 h-4 mr-1"></i>
+                            -8.2%
+                        </span>
+                    </div>
+                    <h3 class="text-gray-500 text-sm mb-1">平均响应时间</h3>
+                    <p class="text-3xl font-bold text-gray-800">245<span class="text-lg">ms</span></p>
+                    <p class="text-xs text-gray-400 mt-2">性能持续优化中</p>
+                </div>
+                
+                <div class="cdf-card cdf-stat-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+                            <i data-lucide="triangle-alert" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <span class="text-red-500 text-sm font-medium">12</span>
+                    </div>
+                    <h3 class="text-gray-500 text-sm mb-1">异常告警</h3>
+                    <p class="text-3xl font-bold text-gray-800">12</p>
+                    <p class="text-xs text-gray-400 mt-2">待处理告警数量</p>
+                </div>
+            </div>
+            
+            <!-- 图表区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 调用量趋势图 -->
+                <div class="lg:col-span-2 cdf-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">调用量趋势</h3>
+                            <p class="text-sm text-gray-500">近 7 天 API 调用统计</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button class="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium">7 天</button>
+                            <button class="px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 rounded-lg">30 天</button>
+                            <button class="px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 rounded-lg">90 天</button>
+                        </div>
+                    </div>
+                    <canvas id="callTrendChart" height="80"></canvas>
+                </div>
+                
+                <!-- API 使用分布 -->
+                <div class="cdf-card rounded-2xl p-6">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800">API 使用分布</h3>
+                        <p class="text-sm text-gray-500">各模型调用占比</p>
+                    </div>
+                    <canvas id="apiDistributionChart" height="200"></canvas>
+                    <div class="mt-4 space-y-2">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                <span class="text-gray-600">GPT-4</span>
+                            </div>
+                            <span class="font-medium text-gray-800">45%</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-cyan-400 rounded-full mr-2"></div>
+                                <span class="text-gray-600">Claude</span>
+                            </div>
+                            <span class="font-medium text-gray-800">28%</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                                <span class="text-gray-600">Gemini</span>
+                            </div>
+                            <span class="font-medium text-gray-800">18%</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-orange-400 rounded-full mr-2"></div>
+                                <span class="text-gray-600">其他</span>
+                            </div>
+                            <span class="font-medium text-gray-800">9%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- API 列表页 -->
+        <section id="api-list" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 cdf-tech-line pl-12">API 列表</h2>
+                <p class="text-gray-500 mt-2">管理和查看所有可用的 AI 服务接口</p>
+            </div>
+            
+            <!-- 搜索和筛选 -->
+            <div class="cdf-card rounded-2xl p-4 mb-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex-1 flex items-center space-x-4">
+                        <div class="relative flex-1 max-w-md">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+                            <input type="text" placeholder="搜索 API 名称、描述..." class="cdf-input w-full pl-10 pr-4 py-2.5 rounded-xl bg-white text-gray-700 text-sm" />
+                        </div>
+                        <select class="cdf-input px-4 py-2.5 rounded-xl bg-white text-gray-700 text-sm">
+                            <option>所有状态</option>
+                            <option>运行中</option>
+                            <option>已禁用</option>
+                            <option>维护中</option>
+                        </select>
+                        <select class="cdf-input px-4 py-2.5 rounded-xl bg-white text-gray-700 text-sm">
+                            <option>所有类型</option>
+                            <option>文本生成</option>
+                            <option>图像生成</option>
+                            <option>语音识别</option>
+                            <option> embeddings</option>
+                        </select>
+                    </div>
+                    <button class="cdf-btn-primary text-white px-6 py-2.5 rounded-xl font-medium flex items-center justify-center">
+                        <i data-lucide="plus" class="w-5 h-5 mr-2"></i>
+                        添加 API
+                    </button>
+                </div>
+            </div>
+            
+            <!-- API 列表 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- API 卡片 1 -->
+                <div class="cdf-card cdf-api-card rounded-2xl p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 cdf-gradient rounded-xl flex items-center justify-center">
+                                <i data-lucide="message-square" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">GPT-4 Turbo</h3>
+                                <p class="text-xs text-gray-500">OpenAI / 文本生成</p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">运行中</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">最新的 GPT-4 模型，提供更快的响应速度和更低的成本，适用于各种复杂任务。</p>
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span class="flex items-center">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 mr-1"></i>
+                                12.5K/天
+                            </span>
+                            <span class="flex items-center">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 mr-1"></i>
+                                245ms
+                            </span>
+                        </div>
+                        <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">详情 →</button>
+                    </div>
+                </div>
+                
+                <!-- API 卡片 2 -->
+                <div class="cdf-card cdf-api-card rounded-2xl p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Claude 3.5 Sonnet</h3>
+                                <p class="text-xs text-gray-500">Anthropic / 文本生成</p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">运行中</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">Anthropic 最新模型，在推理和代码能力上有显著提升。</p>
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span class="flex items-center">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 mr-1"></i>
+                                8.2K/天
+                            </span>
+                            <span class="flex items-center">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 mr-1"></i>
+                                312ms
+                            </span>
+                        </div>
+                        <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">详情 →</button>
+                    </div>
+                </div>
+                
+                <!-- API 卡片 3 -->
+                <div class="cdf-card cdf-api-card rounded-2xl p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="sparkles" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Gemini Pro</h3>
+                                <p class="text-xs text-gray-500">Google / 多模态</p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">维护中</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">Google 的多模态大模型，支持文本、图像、音频等多种输入。</p>
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span class="flex items-center">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 mr-1"></i>
+                                5.6K/天
+                            </span>
+                            <span class="flex items-center">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 mr-1"></i>
+                                289ms
+                            </span>
+                        </div>
+                        <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">详情 →</button>
+                    </div>
+                </div>
+                
+                <!-- API 卡片 4 -->
+                <div class="cdf-card cdf-api-card rounded-2xl p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+                                <i data-lucide="image" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">DALL-E 3</h3>
+                                <p class="text-xs text-gray-500">OpenAI / 图像生成</p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">运行中</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">先进的图像生成模型，可根据文本描述创建高质量图像。</p>
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span class="flex items-center">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 mr-1"></i>
+                                2.1K/天
+                            </span>
+                            <span class="flex items-center">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 mr-1"></i>
+                                1.2s
+                            </span>
+                        </div>
+                        <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">详情 →</button>
+                    </div>
+                </div>
+                
+                <!-- API 卡片 5 -->
+                <div class="cdf-card cdf-api-card rounded-2xl p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="mic" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Whisper</h3>
+                                <p class="text-xs text-gray-500">OpenAI / 语音识别</p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">运行中</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">强大的语音识别模型，支持多语言实时转录。</p>
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span class="flex items-center">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 mr-1"></i>
+                                1.8K/天
+                            </span>
+                            <span class="flex items-center">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 mr-1"></i>
+                                456ms
+                            </span>
+                        </div>
+                        <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">详情 →</button>
+                    </div>
+                </div>
+                
+                <!-- API 卡片 6 -->
+                <div class="cdf-card cdf-api-card rounded-2xl p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-pink-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="code" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Embeddings V3</h3>
+                                <p class="text-xs text-gray-500">OpenAI / Embeddings</p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">已禁用</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">文本向量化模型，用于语义搜索和文本相似度计算。</p>
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span class="flex items-center">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 mr-1"></i>
+                                0/天
+                            </span>
+                            <span class="flex items-center">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 mr-1"></i>
+                                --
+                            </span>
+                        </div>
+                        <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">详情 →</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 分页 -->
+            <div class="flex items-center justify-center mt-8 space-x-2">
+                <button class="px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg">上一页</button>
+                <button class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg">1</button>
+                <button class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">2</button>
+                <button class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">3</button>
+                <span class="px-2 text-gray-400">...</span>
+                <button class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">12</button>
+                <button class="px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg">下一页</button>
+            </div>
+        </section>
+        
+        <!-- API 调用详情页 -->
+        <section id="api-detail" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 cdf-tech-line pl-12">API 调用测试</h2>
+                <p class="text-gray-500 mt-2">在线测试 API 接口，查看请求参数和返回结果</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 请求参数表单 -->
+                <div class="cdf-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800">请求配置</h3>
+                        <select class="cdf-input px-3 py-1.5 rounded-lg bg-white text-gray-700 text-sm">
+                            <option>GPT-4 Turbo</option>
+                            <option>Claude 3.5</option>
+                            <option>Gemini Pro</option>
+                        </select>
+                    </div>
+                    
+                    <form class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">System Prompt</label>
+                            <textarea class="cdf-input w-full px-4 py-3 rounded-xl bg-white text-gray-700 text-sm resize-none" rows="3" placeholder="你是一个有帮助的 AI 助手..."></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">User Message</label>
+                            <textarea class="cdf-input w-full px-4 py-3 rounded-xl bg-white text-gray-700 text-sm resize-none" rows="4" placeholder="请输入要发送的消息..."></textarea>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Temperature</label>
+                                <input type="number" step="0.1" min="0" max="2" value="0.7" class="cdf-input w-full px-4 py-2.5 rounded-xl bg-white text-gray-700 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Max Tokens</label>
+                                <input type="number" value="2048" class="cdf-input w-full px-4 py-2.5 rounded-xl bg-white text-gray-700 text-sm" />
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Top P</label>
+                                <input type="number" step="0.1" min="0" max="1" value="1.0" class="cdf-input w-full px-4 py-2.5 rounded-xl bg-white text-gray-700 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Frequency Penalty</label>
+                                <input type="number" step="0.1" min="0" max="2" value="0.0" class="cdf-input w-full px-4 py-2.5 rounded-xl bg-white text-gray-700 text-sm" />
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" id="stream" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" checked />
+                            <label for="stream" class="text-sm text-gray-700">流式响应 (Stream)</label>
+                        </div>
+                        
+                        <button type="button" class="cdf-btn-primary w-full text-white py-3 rounded-xl font-medium flex items-center justify-center">
+                            <i data-lucide="send" class="w-5 h-5 mr-2"></i>
+                            发送请求
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- 调用结果 -->
+                <div class="cdf-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800">响应结果</h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">200 OK</span>
+                            <span class="text-xs text-gray-500">312ms</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-xl p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-medium text-gray-500 uppercase">Response Body</span>
+                            <button class="text-blue-600 hover:text-blue-700 text-xs font-medium flex items-center">
+                                <i data-lucide="copy" class="w-3.5 h-3.5 mr-1"></i>
+                                复制
+                            </button>
+                        </div>
+                        <pre class="text-xs text-gray-700 overflow-x-auto"><code>{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1677652288,
+  "model": "gpt-4-turbo",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "你好！我是 CDF AI Gateway 的智能助手，很高兴为您服务。请问有什么可以帮助您的？"
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 25,
+    "completion_tokens": 45,
+    "total_tokens": 70
+  }
+}</code></pre>
+                    </div>
+                    
+                    <!-- 历史记录 -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-3">调用历史</h4>
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-700">GPT-4 Turbo</p>
+                                        <p class="text-xs text-gray-500">你好！请帮我分析这段代码...</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-400">2 分钟前</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-700">Claude 3.5</p>
+                                        <p class="text-xs text-gray-500">请将以下内容翻译成英文...</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-400">5 分钟前</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-700">Gemini Pro</p>
+                                        <p class="text-xs text-gray-500">生成一张科技风格的图片...</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-400">12 分钟前</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 设置页 -->
+        <section id="settings" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 cdf-tech-line pl-12">系统设置</h2>
+                <p class="text-gray-500 mt-2">管理系统配置、用户权限和访问控制</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- 侧边导航 -->
+                <div class="cdf-card rounded-2xl p-4">
+                    <nav class="space-y-1">
+                        <a href="#" class="flex items-center px-4 py-3 text-sm font-medium bg-blue-50 text-blue-700 rounded-xl">
+                            <i data-lucide="users" class="w-5 h-5 mr-3"></i>
+                            用户管理
+                        </a>
+                        <a href="#" class="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl">
+                            <i data-lucide="shield" class="w-5 h-5 mr-3"></i>
+                            权限管理
+                        </a>
+                        <a href="#" class="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl">
+                            <i data-lucide="settings" class="w-5 h-5 mr-3"></i>
+                            系统配置
+                        </a>
+                        <a href="#" class="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl">
+                            <i data-lucide="key" class="w-5 h-5 mr-3"></i>
+                            API Keys
+                        </a>
+                        <a href="#" class="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl">
+                            <i data-lucide="activity" class="w-5 h-5 mr-3"></i>
+                            审计日志
+                        </a>
+                        <a href="#" class="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl">
+                            <i data-lucide="bell" class="w-5 h-5 mr-3"></i>
+                            通知设置
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- 主要内容 -->
+                <div class="lg:col-span-3 space-y-6">
+                    <!-- 用户管理 -->
+                    <div class="cdf-card rounded-2xl p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800">用户管理</h3>
+                            <button class="cdf-btn-primary text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center">
+                                <i data-lucide="user-plus" class="w-4 h-4 mr-2"></i>
+                                添加用户
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-100">
+                                        <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">用户</th>
+                                        <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">角色</th>
+                                        <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">状态</th>
+                                        <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">最后登录</th>
+                                        <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm">
+                                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                                        <td class="py-3 px-4">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-8 h-8 cdf-gradient rounded-full flex items-center justify-center">
+                                                    <span class="text-white text-xs font-medium">A</span>
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-gray-800">admin</p>
+                                                    <p class="text-xs text-gray-500">admin@cdf.com</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">超级管理员</span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">活跃</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-gray-500">刚刚</td>
+                                        <td class="py-3 px-4">
+                                            <button class="text-blue-600 hover:text-blue-700 text-sm font-medium mr-3">编辑</button>
+                                            <button class="text-gray-400 hover:text-gray-600 text-sm">更多</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                                        <td class="py-3 px-4">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                                                    <span class="text-white text-xs font-medium">D</span>
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-gray-800">developer1</p>
+                                                    <p class="text-xs text-gray-500">dev1@cdf.com</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">开发者</span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">活跃</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-gray-500">2 小时前</td>
+                                        <td class="py-3 px-4">
+                                            <button class="text-blue-600 hover:text-blue-700 text-sm font-medium mr-3">编辑</button>
+                                            <button class="text-gray-400 hover:text-gray-600 text-sm">更多</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-3 px-4">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
+                                                    <span class="text-white text-xs font-medium">V</span>
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-gray-800">viewer1</p>
+                                                    <p class="text-xs text-gray-500">view1@cdf.com</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">访客</span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">离线</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-gray-500">3 天前</td>
+                                        <td class="py-3 px-4">
+                                            <button class="text-blue-600 hover:text-blue-700 text-sm font-medium mr-3">编辑</button>
+                                            <button class="text-gray-400 hover:text-gray-600 text-sm">更多</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 系统配置 -->
+                    <div class="cdf-card rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-6">系统配置</h3>
+                        
+                        <div class="space-y-6">
+                            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                                <div>
+                                    <p class="font-medium text-gray-800">API 速率限制</p>
+                                    <p class="text-sm text-gray-500">限制每个用户的 API 调用频率</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <input type="text" value="100 次/分钟" class="cdf-input px-4 py-2 rounded-xl bg-white text-gray-700 text-sm w-32" />
+                                    <button class="cdf-btn-primary text-white px-4 py-2 rounded-xl text-sm font-medium">保存</button>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                                <div>
+                                    <p class="font-medium text-gray-800">Token 配额管理</p>
+                                    <p class="text-sm text-gray-500">设置用户每月的 Token 使用上限</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <input type="text" value="1,000,000" class="cdf-input px-4 py-2 rounded-xl bg-white text-gray-700 text-sm w-32" />
+                                    <button class="cdf-btn-primary text-white px-4 py-2 rounded-xl text-sm font-medium">保存</button>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                                <div>
+                                    <p class="font-medium text-gray-800">自动重试</p>
+                                    <p class="text-sm text-gray-500">API 调用失败时自动重试次数</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <input type="number" value="3" class="cdf-input px-4 py-2 rounded-xl bg-white text-gray-700 text-sm w-20" />
+                                    <button class="cdf-btn-primary text-white px-4 py-2 rounded-xl text-sm font-medium">保存</button>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium text-gray-800">请求日志保留期</p>
+                                    <p class="text-sm text-gray-500">历史调用记录的保存天数</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <select class="cdf-input px-4 py-2 rounded-xl bg-white text-gray-700 text-sm">
+                                        <option>7 天</option>
+                                        <option selected>30 天</option>
+                                        <option>90 天</option>
+                                        <option>永久</option>
+                                    </select>
+                                    <button class="cdf-btn-primary text-white px-4 py-2 rounded-xl text-sm font-medium">保存</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 平板视图展示 -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 cdf-tech-line pl-12">平板视图预览</h2>
+                <p class="text-gray-500 mt-2">iPad / Tablet 适配效果</p>
+            </div>
+            
+            <div class="cdf-card rounded-2xl p-8 overflow-hidden">
+                <div class="border-4 border-gray-800 rounded-3xl overflow-hidden max-w-4xl mx-auto">
+                    <div class="bg-gray-900 px-4 py-2 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                        </div>
+                        <span class="text-gray-400 text-xs">Tablet View (768px)</span>
+                    </div>
+                    <div class="bg-gray-50 p-6">
+                        <!-- 简化版平板视图 -->
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-8 h-8 cdf-gradient rounded-lg flex items-center justify-center">
+                                    <span class="text-white font-bold text-sm">C</span>
+                                </div>
+                                <span class="font-semibold text-gray-800">CDF Gateway</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <button class="p-2 text-gray-500">
+                                    <i data-lucide="bell" class="w-5 h-5"></i>
+                                </button>
+                                <div class="w-8 h-8 cdf-gradient rounded-full flex items-center justify-center">
+                                    <span class="text-white text-sm font-medium">A</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="cdf-card rounded-xl p-4">
+                                <p class="text-xs text-gray-500 mb-1">今日调用</p>
+                                <p class="text-2xl font-bold text-gray-800">24.5K</p>
+                            </div>
+                            <div class="cdf-card rounded-xl p-4">
+                                <p class="text-xs text-gray-500 mb-1">成功率</p>
+                                <p class="text-2xl font-bold text-gray-800">99.9%</p>
+                            </div>
+                        </div>
+                        
+                        <div class="cdf-card rounded-xl p-4">
+                            <h4 class="text-sm font-semibold text-gray-800 mb-3">快速操作</h4>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button class="cdf-btn-primary text-white py-2.5 rounded-lg text-sm font-medium">API 列表</button>
+                                <button class="bg-gray-100 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200">调用测试</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 移动端视图展示 -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 cdf-tech-line pl-12">移动视图预览</h2>
+                <p class="text-gray-500 mt-2">Mobile 适配效果</p>
+            </div>
+            
+            <div class="cdf-card rounded-2xl p-8 overflow-hidden">
+                <div class="border-8 border-gray-800 rounded-[2.5rem] overflow-hidden w-80 mx-auto">
+                    <div class="bg-gray-900 px-6 py-3 flex items-center justify-center">
+                        <div class="w-20 h-6 bg-gray-800 rounded-full"></div>
+                    </div>
+                    <div class="bg-gray-50 p-4">
+                        <!-- 简化版移动视图 -->
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-8 h-8 cdf-gradient rounded-lg flex items-center justify-center">
+                                    <span class="text-white font-bold text-sm">C</span>
+                                </div>
+                                <span class="font-semibold text-gray-800 text-sm">CDF</span>
+                            </div>
+                            <button class="p-2 text-gray-500">
+                                <i data-lucide="menu" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="cdf-card rounded-xl p-3">
+                                <p class="text-[10px] text-gray-500 mb-1">调用量</p>
+                                <p class="text-lg font-bold text-gray-800">24.5K</p>
+                            </div>
+                            <div class="cdf-card rounded-xl p-3">
+                                <p class="text-[10px] text-gray-500 mb-1">成功率</p>
+                                <p class="text-lg font-bold text-gray-800">99.9%</p>
+                            </div>
+                        </div>
+                        
+                        <div class="cdf-card rounded-xl p-3 mb-4">
+                            <h4 class="text-xs font-semibold text-gray-800 mb-2">热门 API</h4>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-600">GPT-4</span>
+                                    <span class="font-medium text-gray-800">45%</span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-600">Claude</span>
+                                    <span class="font-medium text-gray-800">28%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="cdf-btn-primary w-full text-white py-2.5 rounded-xl text-sm font-medium">
+                            查看更多
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-10 h-10 cdf-gradient rounded-xl flex items-center justify-center">
+                            <span class="text-white font-bold text-lg">C</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg">CDF AI Gateway</h3>
+                            <p class="text-xs text-gray-400">企业级 AI 服务网关</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-400">统一、高效、安全的 AI 服务接入平台</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">产品</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">功能特性</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">API 文档</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">定价方案</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">更新日志</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">支持</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">帮助中心</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">技术文档</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">社区论坛</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">联系我们</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">法律</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">隐私政策</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">服务条款</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">数据安全</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">合规认证</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row items-center justify-between">
+                <p class="text-sm text-gray-400">&copy; 2025 CDF AI Gateway. All rights reserved.</p>
+                <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i data-lucide="github" class="w-5 h-5"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i data-lucide="twitter" class="w-5 h-5"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i data-lucide="linkedin" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 初始化 Lucide 图标
+        lucide.createIcons();
+        
+        // Chart.js 调用量趋势图
+        const trendCtx = document.getElementById('callTrendChart').getContext('2d');
+        const gradient = trendCtx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.3)');
+        gradient.addColorStop(1, 'rgba(37, 99, 235, 0.01)');
+        
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                datasets: [{
+                    label: '调用量',
+                    data: [18500, 21200, 19800, 23400, 22100, 17600, 24589],
+                    borderColor: '#2563EB',
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#2563EB',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y.toLocaleString() + ' 次';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#9CA3AF',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF',
+                            font: {
+                                size: 12
+                            },
+                            callback: function(value) {
+                                return (value / 1000).toFixed(0) + 'K';
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+        
+        // Chart.js API 分布饼图
+        const pieCtx = document.getElementById('apiDistributionChart').getContext('2d');
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['GPT-4', 'Claude', 'Gemini', '其他'],
+                datasets: [{
+                    data: [45, 28, 18, 9],
+                    backgroundColor: [
+                        '#3B82F6',
+                        '#22D3EE',
+                        '#A855F7',
+                        '#FB923C'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.parsed + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
